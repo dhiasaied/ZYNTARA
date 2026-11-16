@@ -1,0 +1,24 @@
+api_platform:
+    title: ZYNTARA API
+    description: 'From LLM to Agentic AI — agents, tools, RAG and multi-agent crews.'
+    version: 1.0.0
+    formats:
+        jsonld: ['application/ld+json']
+        json: ['application/json']
+    patch_formats:
+        json: ['application/merge-patch+json']
+    docs_formats:
+        jsonld: ['application/ld+json']
+        jsonopenapi: ['application/vnd.openapi+json']
+        html: ['text/html']
+    defaults:
+        stateless: true
+        pagination_client_items_per_page: true
+        pagination_maximum_items_per_page: 100
+        cache_headers:
+            vary: ['Content-Type', 'Authorization', 'Origin']
+    swagger:
+        api_keys:
+            JWT:
+                name: Authorization
+                type: header

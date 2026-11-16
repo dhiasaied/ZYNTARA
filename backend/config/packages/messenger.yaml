@@ -1,0 +1,30 @@
+framework:
+    messenger:
+        failure_transport: failed
+
+        transports:
+            async:
+                dsn: '%env(MESSENGER_TRANSPORT_DSN)%'
+                retry_strategy:
+                    max_retries: 3
+                    delay: 2000
+                    multiplier: 3
+            # Runs are not retried automatically: a failed LLM run is reported to the user who can retry it.
+            runs:
+                dsn: '%env(MESSENGER_RUNS_TRANSPORT_DSN)%'
+                retry_strategy:
+                    max_retries: 0
+            failed: 'doctrine://default?queue_name=failed'
+
+        routing:
+            App\Message\ExecuteRun: runs
+            App\Message\IngestDocument: async
+            App\Message\DeleteVectors: async
+
+when@test:
+    framework:
+        messenger:
+            transports:
+                async: 'in-memory://'
+                runs: 'in-memory://'
+                failed: 'in-memory://'

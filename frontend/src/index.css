@@ -1,0 +1,105 @@
+@import "tailwindcss";
+
+/* Visual identity taken from the reference video: near-black canvas, faint grid,
+   warm ember glow, glassy rounded tiles, heavy rounded display type. */
+@theme {
+  --color-ink-950: #0a0908;
+  --color-ink-900: #12100e;
+  --color-ink-850: #171411;
+  --color-ink-800: #1d1915;
+  --color-ink-700: #2a241e;
+  --color-ink-600: #3a322a;
+  --color-ember-300: #ffb27a;
+  --color-ember-400: #ff8a3d;
+  --color-ember-500: #ff6a1a;
+  --color-ember-600: #e5520a;
+  --color-ember-700: #b33d05;
+  --color-sand-50: #f8f3ec;
+  --color-sand-200: #ddd3c7;
+  --color-sand-400: #a39a90;
+  --color-sand-500: #7d756c;
+  --color-ok-500: #22c55e;
+  --color-warn-500: #f59e0b;
+  --color-bad-500: #ef4444;
+  --font-display: "Poppins", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+  --shadow-glow: 0 0 0 1px rgb(255 106 26 / 0.35), 0 8px 40px -8px rgb(255 106 26 / 0.45);
+  --animate-pulse-slow: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@layer base {
+  html,
+  body,
+  #root {
+    min-height: 100%;
+  }
+  body {
+    @apply bg-ink-950 text-sand-50 font-sans antialiased;
+    background-image:
+      radial-gradient(60rem 40rem at 85% -10%, rgb(255 106 26 / 0.14), transparent 60%),
+      radial-gradient(50rem 35rem at -10% 110%, rgb(255 106 26 / 0.08), transparent 60%),
+      linear-gradient(rgb(255 255 255 / 0.025) 1px, transparent 1px),
+      linear-gradient(90deg, rgb(255 255 255 / 0.025) 1px, transparent 1px);
+    background-size: auto, auto, 32px 32px, 32px 32px;
+    background-attachment: fixed;
+  }
+  ::selection {
+    background: rgb(255 106 26 / 0.35);
+  }
+  :focus-visible {
+    outline: 2px solid var(--color-ember-500);
+    outline-offset: 2px;
+  }
+  /* Grid tracks must be allowed to shrink below their content (long code, URLs, tool output). */
+  .grid > * {
+    min-width: 0;
+  }
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-ink-600) transparent;
+  }
+}
+
+@layer components {
+  .glass {
+    @apply rounded-2xl border border-white/[0.07] bg-ink-900/70 backdrop-blur-xl;
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.04), 0 20px 50px -30px rgb(0 0 0 / 0.8);
+  }
+  .tile {
+    @apply rounded-2xl border border-white/[0.08] bg-gradient-to-b from-ink-700/80 to-ink-850;
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.06), 0 10px 30px -12px rgb(0 0 0 / 0.9);
+  }
+  .text-gradient {
+    @apply bg-gradient-to-r from-ember-300 via-ember-500 to-ember-600 bg-clip-text text-transparent;
+  }
+  .field {
+    @apply w-full rounded-xl border border-white/10 bg-ink-950/60 px-3.5 py-2.5 text-sm text-sand-50 placeholder:text-sand-500
+      transition focus:border-ember-500/60 focus:outline-none focus:ring-2 focus:ring-ember-500/20 disabled:opacity-50;
+  }
+  .label {
+    @apply mb-1.5 block text-xs font-semibold tracking-wide text-sand-400 uppercase;
+  }
+  .dotted-line {
+    background-image: linear-gradient(90deg, rgb(255 106 26 / 0.55) 50%, transparent 50%);
+    background-size: 8px 1px;
+  }
+}
+
+.prose-zyntara p { margin: 0.4rem 0; }
+.prose-zyntara ul { list-style: disc; padding-left: 1.25rem; margin: 0.4rem 0; }
+.prose-zyntara ol { list-style: decimal; padding-left: 1.25rem; margin: 0.4rem 0; }
+.prose-zyntara h1, .prose-zyntara h2, .prose-zyntara h3 { font-family: var(--font-display); font-weight: 700; margin: 0.8rem 0 0.3rem; }
+.prose-zyntara h2 { font-size: 1.05rem; }
+.prose-zyntara h3 { font-size: 0.95rem; color: var(--color-ember-300); }
+.prose-zyntara code { font-family: var(--font-mono); font-size: 0.82em; background: rgb(255 255 255 / 0.06); padding: 0.1rem 0.3rem; border-radius: 0.35rem; }
+.prose-zyntara pre { background: var(--color-ink-950); border: 1px solid rgb(255 255 255 / 0.08); border-radius: 0.75rem; padding: 0.8rem; overflow-x: auto; margin: 0.6rem 0; }
+.prose-zyntara pre code { background: none; padding: 0; }
+.prose-zyntara a { color: var(--color-ember-400); text-decoration: underline; }
+.prose-zyntara table { width: 100%; font-size: 0.85em; border-collapse: collapse; margin: 0.5rem 0; }
+.prose-zyntara th, .prose-zyntara td { border: 1px solid rgb(255 255 255 / 0.08); padding: 0.3rem 0.5rem; text-align: left; }
+.prose-zyntara em { color: var(--color-sand-400); }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+}

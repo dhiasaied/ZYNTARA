@@ -1,0 +1,22 @@
+{
+	frankenphp
+	order php_server before file_server
+	admin off
+}
+
+{$SERVER_NAME::80} {
+	root * /app/public
+	encode zstd gzip
+
+	header {
+		X-Content-Type-Options nosniff
+		Referrer-Policy strict-origin-when-cross-origin
+		-Server
+	}
+
+	request_body {
+		max_size 25MB
+	}
+
+	php_server
+}

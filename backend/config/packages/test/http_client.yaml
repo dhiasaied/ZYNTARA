@@ -1,0 +1,7 @@
+framework:
+    http_client:
+        mock_response_factory: App\Tests\Support\AgentsServiceMock
+
+services:
+    App\Tests\Support\AgentsServiceMock:
+        public: true

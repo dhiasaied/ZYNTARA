@@ -1,0 +1,15 @@
+[project]
+name = "zyntara-agents"
+version = "1.0.0"
+description = "LangGraph agents service for ZYNTARA: prompt, tools, RAG, autonomous agents and multi-agent crews"
+requires-python = ">=3.11"
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+testpaths = ["tests"]
+pythonpath = ["."]
+
+[tool.ruff]
+line-length = 140
+target-version = "py311"

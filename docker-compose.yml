@@ -1,0 +1,151 @@
+name: zyntara
+
+x-backend-env: &backend-env
+  APP_ENV: prod
+  APP_SECRET: ${APP_SECRET:?set APP_SECRET in .env}
+  DATABASE_URL: postgresql://${POSTGRES_USER:-zyntara}:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-zyntara}?serverVersion=16&charset=utf8
+  REDIS_URL: redis://redis:6379
+  MESSENGER_TRANSPORT_DSN: redis://redis:6379/zyntara_async
+  MESSENGER_RUNS_TRANSPORT_DSN: redis://redis:6379/zyntara_runs
+  JWT_PASSPHRASE: ${JWT_PASSPHRASE:?set JWT_PASSPHRASE}
+  JWT_TTL: ${JWT_TTL:-86400}
+  CORS_ALLOW_ORIGIN: ${CORS_ALLOW_ORIGIN:-^https?://localhost(:[0-9]+)?$}
+  MERCURE_ENABLED: "1"
+  MERCURE_URL: http://mercure/.well-known/mercure
+  MERCURE_PUBLIC_URL: /.well-known/mercure
+  MERCURE_JWT_SECRET: ${MERCURE_JWT_SECRET:?set MERCURE_JWT_SECRET}
+  MERCURE_JWT_ISSUER: zyntara
+  MERCURE_TOPIC_BASE: https://zyntara.app
+  AGENTS_SERVICE_URL: http://agents:8001
+  INTERNAL_CALLBACK_URL: http://backend
+  INTERNAL_API_TOKEN: ${INTERNAL_API_TOKEN:?set INTERNAL_API_TOKEN}
+  STORAGE_DIR: /data/storage
+  DEFAULT_URI: ${PUBLIC_URL:-http://localhost:8080}
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-zyntara}
+      POSTGRES_USER: ${POSTGRES_USER:-zyntara}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      BUSINESS_DB_PASSWORD: ${BUSINESS_DB_PASSWORD:?set BUSINESS_DB_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./docker/postgres/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  redis:
+    image: redis:7.4-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      retries: 20
+
+  mercure:
+    image: dunglas/mercure:v0.18
+    restart: unless-stopped
+    environment:
+      SERVER_NAME: ":80"
+      MERCURE_PUBLISHER_JWT_KEY: ${MERCURE_JWT_SECRET}
+      MERCURE_SUBSCRIBER_JWT_KEY: ${MERCURE_JWT_SECRET}
+      MERCURE_EXTRA_DIRECTIVES: |
+        cors_origins ${PUBLIC_URL:-http://localhost:8080}
+    volumes:
+      - mercure_data:/data
+
+  mailpit:
+    image: axllent/mailpit:v1.21
+    restart: unless-stopped
+    ports:
+      - "8025:8025" # web UI to read the emails agents send
+
+  agents:
+    build: ./agents
+    restart: unless-stopped
+    environment:
+      APP_ENV: prod
+      INTERNAL_API_TOKEN: ${INTERNAL_API_TOKEN}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-zyntara}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-zyntara}
+      BUSINESS_DATABASE_URL: postgresql://zyntara_readonly:${BUSINESS_DB_PASSWORD}@postgres:5432/${POSTGRES_DB:-zyntara}
+      REDIS_URL: redis://redis:6379
+      STORAGE_DIR: /data/storage
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_BASE_URL: ${OPENAI_BASE_URL:-}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-}
+      EMBEDDING_PROVIDER: ${EMBEDDING_PROVIDER:-auto}
+      TAVILY_API_KEY: ${TAVILY_API_KEY:-}
+      HTTP_USER_AGENT: ZyntaraAgent/1.0 (+${PUBLIC_URL:-http://localhost:8080})
+      SMTP_HOST: ${SMTP_HOST:-mailpit}
+      SMTP_PORT: ${SMTP_PORT:-1025}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      SMTP_FROM: ${SMTP_FROM:-ZYNTARA Agent <agent@zyntara.local>}
+      SMTP_STARTTLS: ${SMTP_STARTTLS:-false}
+    volumes:
+      - storage:/data/storage:ro
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_healthy }
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8001/health', timeout=3)"]
+      interval: 10s
+      retries: 10
+
+  backend:
+    build: ./backend
+    restart: unless-stopped
+    environment:
+      <<: *backend-env
+      SEED_DEMO: ${SEED_DEMO:-1}
+    volumes:
+      - storage:/data/storage
+      - jwt_keys:/app/config/jwt
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_healthy }
+      agents: { condition: service_healthy }
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1/health"]
+      interval: 10s
+      retries: 20
+
+  worker:
+    build: ./backend
+    restart: unless-stopped
+    command: ["php", "bin/console", "messenger:consume", "runs", "async", "--time-limit=3600", "--memory-limit=256M", "-vv"]
+    environment:
+      <<: *backend-env
+      ROLE: worker
+    volumes:
+      - storage:/data/storage
+      - jwt_keys:/app/config/jwt
+    depends_on:
+      backend: { condition: service_healthy }
+    deploy:
+      replicas: ${WORKER_REPLICAS:-2}
+
+  frontend:
+    build: ./frontend
+    restart: unless-stopped
+    ports:
+      - "${HTTP_PORT:-8080}:80"
+    depends_on:
+      backend: { condition: service_healthy }
+
+volumes:
+  postgres_data:
+  redis_data:
+  mercure_data:
+  storage:
+  jwt_keys:
